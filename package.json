@@ -1,0 +1,6 @@
+{
+  "name": "our-orbit-album",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node server.mjs", "check": "node --check app.js && node --check cover.js && node --check galaxy.js && node --check daily-selection.js && node --check photo-effects.js && node --check server.mjs" }
+}

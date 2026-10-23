@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080e20">
+  <meta name="description" content="属于两个人的夜空相册。把平凡日子，存成闪光的回忆。">
+  <title>OUR ORBIT · Memory</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="cover.css">
+  <link rel="stylesheet" href="photo-effects.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="module" src="app.js"></script>
+</head>
+<body data-screen="cover">
+  <section id="cover" class="cover" aria-label="相册封面">
+    <div class="cover-media" aria-hidden="true">
+      <div class="cover-fallback"></div>
+      <video class="cover-video" data-slide="0" muted playsinline loop preload="auto" disablepictureinpicture aria-hidden="true" tabindex="-1" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260629_030107_874273ea-684a-4e90-bb96-8fdfde48d53d.mp4"></video>
+      <video class="cover-video" data-slide="1" muted playsinline loop preload="metadata" disablepictureinpicture aria-hidden="true" tabindex="-1" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260629_032424_3c9c2a9d-807b-4482-80e6-dd6d9dfd4545.mp4"></video>
+      <video class="cover-video" data-slide="2" muted playsinline loop preload="metadata" disablepictureinpicture aria-hidden="true" tabindex="-1" src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260627_094019_4214ea73-b963-46a4-8327-61489192de99.mp4"></video>
+      <div class="cover-shade"></div>
+    </div>
+    <header class="cover-header">
+      <nav class="cover-nav" aria-label="封面导航">
+        <a href="#album"><small>01 /</small> 我们的回忆</a>
+        <a href="#favorites"><small>02 /</small> 心动收藏</a>
+        <button type="button" data-info="about"><small>03 /</small> 关于这里</button>
+        <button type="button" data-info="storage"><small>04 /</small> 保存说明</button>
+      </nav>
+      <button class="cover-menu-toggle" aria-controls="cover-mobile-menu" aria-expanded="false">Menu <span aria-hidden="true">＋</span></button>
+      <div class="cover-signature"><span id="cover-name">OUR ORBIT</span><time id="cover-clock" aria-label="上海当前时间">SHANGHAI --:--:--</time></div>
+    </header>
+    <div id="cover-mobile-menu" class="cover-mobile-menu" inert><nav aria-label="封面手机导航"><a href="#album"><small>01 /</small> 我们的回忆</a><a href="#favorites"><small>02 /</small> 心动收藏</a><button data-info="about"><small>03 /</small> 关于这里</button><button data-info="storage"><small>04 /</small> 保存说明</button></nav></div>
+    <div class="cover-content">
+      <div class="cover-middle">
+        <div class="cover-switcher" role="group" aria-label="切换动态封面">
+          <button data-cover-slide="0" aria-pressed="true"><small>01 /</small> PINK SKY</button>
+          <button data-cover-slide="1" aria-pressed="false"><small>02 /</small> FLOWER WINDOW</button>
+          <button data-cover-slide="2" aria-pressed="false"><small>03 /</small> GOLDEN BLOOM</button>
+        </div>
+        <div class="cover-status"><span><i></i> A space for just us</span><span class="cover-status-sub">所有平凡，都因为你而闪光。</span></div>
+      </div>
+      <div class="cover-bottom">
+        <div class="cover-title-block reveal-up"><p>YOU, ME & ALL THE LITTLE MOMENTS</p><h1>YT<span>.</span></h1></div>
+        <div class="cover-invitation reveal-right"><a class="enter-album" href="#album"><span>memory</span><span aria-hidden="true">↗</span></a></div>
+      </div>
+      <div class="cover-bottom-line"><span>OUR LITTLE ORBIT — A MEMORY COLLECTION</span><div><span id="cover-media-note" role="status"></span><button id="cover-motion" aria-pressed="true" aria-label="暂停封面动态">Ⅱ 暂停动态</button></div></div>
+    </div>
+  </section>
+  <div id="album-shell" hidden>
+  <div class="sky" aria-hidden="true"><canvas id="galaxy-canvas"></canvas><div class="nebula"></div><div id="stars"></div></div>
+  <header class="header">
+    <a class="brand" href="#cover" aria-label="返回相册封面"><span class="brand-icon" aria-hidden="true">☾</span><span><strong id="brand-name">OUR ORBIT</strong><small>OUR LITTLE ORBIT</small></span></a>
+    <nav aria-label="主导航"><a class="nav-cover" href="#cover">封面</a><a class="nav-albums" href="#collection">所有回忆</a><button class="text-button" id="style-open"><span aria-hidden="true">✧</span> 调整风格</button><button class="primary" id="import-open"><span aria-hidden="true">＋</span> 放入回忆</button></nav>
+  </header>
+  <main>
+    <section class="universe" aria-label="互动照片空间">
+      <div class="universe-top"><span class="eyebrow"><i></i> A LITTLE UNIVERSE FOR TWO</span><span id="demo-label" class="demo-label">示例插画 · 等待你们的照片</span></div>
+      <div id="stage" class="stage" data-view="ring" tabindex="0" aria-label="照片星空">
+        <div class="orbit-line" aria-hidden="true"></div>
+        <div id="photo-space" class="photo-space" aria-label="照片画廊"></div>
+        <div class="effect-toolbar"><div class="ring-chapters" role="group" aria-label="星轨展开方式"><button type="button" data-chapter="0" aria-pressed="true">圆环</button><button type="button" data-chapter="1" aria-pressed="false">弧形</button><button type="button" data-chapter="2" aria-pressed="false">叠放</button><button type="button" data-chapter="3" aria-pressed="false">展开</button></div><button type="button" id="atlas-home" class="atlas-home">回到全景 ↗</button></div>
+        <div id="atlas-focus-info" class="atlas-focus-info" hidden><span>IN THIS MOMENT</span><strong id="atlas-focus-title"></strong><div><button type="button" id="atlas-focus-open">查看照片 ↗</button><button type="button" id="atlas-focus-back">返回全景</button></div></div>
+      </div>
+      <div class="universe-bottom"><p id="interaction-hint">左右滑动浏览今日精选 · 轻点照片查看</p><div class="view-controls" role="group" aria-label="照片排列方式"><button data-view="ring" aria-pressed="true"><span aria-hidden="true">◌</span> 星轨</button><button data-view="atlas" aria-pressed="false"><span aria-hidden="true">✳</span> 穿梭</button><button data-view="grid" aria-pressed="false"><span aria-hidden="true">▦</span> 平铺</button><span class="control-divider"></span><button id="motion-toggle" aria-label="暂停旋转" aria-pressed="true">Ⅱ</button></div><div class="page-controls"><button id="page-prev" class="icon-button" aria-label="上一组相册">←</button><span id="space-count">今日精选</span><button id="page-next" class="icon-button" aria-label="下一组相册">→</button></div></div>
+    </section>
+    <section class="collection" id="collection" aria-labelledby="collection-title" hidden>
+      <a class="collection-back" href="#album">← 返回星空</a>
+      <div class="section-heading"><div><span class="eyebrow">COLLECT THE ORDINARY</span><h2 id="collection-title" tabindex="-1">那些，舍不得忘的小事<span id="photo-count">10 个片段</span></h2></div><button class="text-button" id="album-create">＋ 新建相册</button></div>
+      <div class="collection-tools"><div id="album-filters" class="filters" aria-label="筛选相册"></div><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="找找某段回忆" aria-label="搜索照片标题、日期或相册"></label></div>
+      <div id="photo-grid" class="photo-grid"></div>
+      <button id="load-more" class="load-more" type="button" hidden>再看更多回忆 ↓</button>
+      <div id="empty" class="empty" hidden><span aria-hidden="true">✧</span><h3>这一片星空，留给新的回忆</h3><p id="empty-text">放入第一张照片，让故事从这里开始。</p><button class="primary" id="empty-import">放入照片</button></div>
+    </section>
+  </main>
+  <footer><span>在浩瀚日常里，收藏属于我们的光。</span><span class="local-note"><i></i> 本机预览 · 照片仅保存在当前浏览器</span></footer>
+  </div>
+  <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="style-dialog" class="style-dialog" aria-labelledby="style-title">
+    <form id="style-form"><div class="dialog-heading"><div><span class="eyebrow">MAKE IT YOURS</span><h2 id="style-title">把夜空，调成你的样子</h2></div><button type="button" class="icon-button close-dialog" aria-label="关闭风格面板">×</button></div>
+      <p class="muted">为你们的回忆，选一片喜欢的星空。</p>
+      <label>相册名字<input name="name" maxlength="24" required value="OUR ORBIT"></label>
+      <fieldset><legend>星空色调</legend><div class="palette-options"><label><input type="radio" name="palette" value="pink" checked><span class="swatch pink"></span>星河粉</label><label><input type="radio" name="palette" value="blue"><span class="swatch blue"></span>月光蓝</label><label><input type="radio" name="palette" value="violet"><span class="swatch violet"></span>暮色紫</label><label><input type="radio" name="palette" value="teal"><span class="swatch teal"></span>极光绿</label></div></fieldset>
+      <label class="galaxy-switch"><input name="galaxyMotion" type="checkbox" checked> 让星河缓缓流动</label>
+      <label class="range-label">星光亮度 <output id="glow-output">60%</output><input name="glow" type="range" min="10" max="100" value="60"></label>
+      <label class="range-label">旋转速度 <output id="speed-output">轻轻流动</output><input name="speed" type="range" min="0" max="100" value="30"></label>
+      <p class="settings-note">修改会即时预览，并保存在当前浏览器。</p><div class="dialog-actions"><button type="button" class="text-button" id="style-reset">恢复初始风格</button><button class="primary" type="submit">完成</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="photo-dialog" class="photo-dialog" aria-label="照片详情">
+    <button class="icon-button close-dialog floating-close" aria-label="关闭照片详情">×</button>
+    <div class="lightbox-image"><button id="photo-prev" class="icon-button lightbox-prev" aria-label="上一张照片">←</button><img id="detail-image" alt=""><button id="photo-next" class="icon-button lightbox-next" aria-label="下一张照片">→</button></div>
+    <form id="detail-form" class="detail-info"><span class="eyebrow" id="detail-label">OUR MEMORY</span><label>这一刻的名字<input name="caption" maxlength="100" required></label><div class="detail-fields"><label>回忆日期<input name="date" type="date" required></label><label>收进相册<select name="album"></select></label></div><p id="detail-note" class="muted"></p><div class="detail-actions"><button type="button" id="photo-favorite" class="text-button">♡ 收藏</button><button type="button" id="photo-download" class="text-button">↓ 原图</button><button type="button" id="photo-delete" class="text-button danger">删除</button><button type="submit" class="primary" id="photo-save">保存</button></div></form>
+  </dialog>
+  <dialog id="album-dialog" class="small-dialog" aria-labelledby="album-title"><form id="album-form"><div class="dialog-heading"><h2 id="album-title">为一段回忆，起个名字</h2><button type="button" class="icon-button close-dialog" aria-label="关闭新建相册">×</button></div><label>相册名称<input name="albumName" placeholder="比如：第一次一起看海" maxlength="30" required></label><button type="submit" class="primary">创建相册</button></form></dialog>
+  <dialog id="delete-dialog" class="small-dialog" aria-labelledby="delete-title"><h2 id="delete-title">移除这张照片？</h2><p class="muted">这会删除当前浏览器里的相册副本，不会删除电脑上的原始文件。</p><div class="dialog-actions"><button class="text-button close-dialog">保留</button><button id="delete-confirm" class="primary">确认移除</button></div></dialog>
+  <dialog id="cover-info-dialog" class="small-dialog" aria-labelledby="cover-info-title"><div class="dialog-heading"><h2 id="cover-info-title">关于这片星空</h2><button class="icon-button close-dialog" aria-label="关闭说明">×</button></div><div id="cover-info-content" class="muted"></div><div class="dialog-actions"><button class="text-button close-dialog">知道了</button><a class="primary" href="#album" id="info-enter">进入相册 ↗</a></div></dialog>
+</body>
+</html>
