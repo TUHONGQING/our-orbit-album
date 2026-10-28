@@ -2,5 +2,15 @@
   "name": "our-orbit-album",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "node server.mjs", "check": "node --check app.js && node --check cover.js && node --check galaxy.js && node --check daily-selection.js && node --check photo-effects.js && node --check server.mjs" }
+  "scripts": {
+    "dev": "node build-release.mjs && node server.mjs",
+    "build": "node build-release.mjs",
+    "check": "node --check app.js && node --check cloud-service.js && node --check cover.js && node --check galaxy.js && node --check daily-selection.js && node --check photo-effects.js && node --check server.mjs"
+  },
+  "dependencies": {
+    "@cloudbase/js-sdk": "3.10.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.21.5"
+  }
 }

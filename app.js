@@ -2,6 +2,7 @@ import { createGalaxy } from './galaxy.js';
 import { initCover } from './cover.js';
 import { pickDailyPhotos, shanghaiDateKey } from './daily-selection.js';
 import { atlasPoint, atlasPose, cardGalleryPose, clamp } from './photo-effects.js';
+import * as cloud from './cloud-service.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -28,6 +29,7 @@ let currentFilter = 'all', query = '', view = 'ring', page = 0;
 let dailyKey = shanghaiDateKey(), collectionVisible = 60;
 let rotating = !reducedMotion.matches, dragging = false, dragMoved = false;
 let currentPhoto = null, detailSource = 'collection', db = null, loading = true, importing = false, saving = false;
+let cloudUser = null, localRecords = [], lastLibraryRefresh = 0;
 let frame = 0, lastTime = 0, stageWidth = 0, stageHeight = 0;
 let inertiaFrame = 0, inertiaLastTime = 0, inertiaVelocity = 0, positionFrame = 0, wheelTimer = 0;
 let spaceCards = [];
@@ -95,19 +97,51 @@ $('#style-reset').addEventListener('click', () => { settings = {...defaults}; po
 function openDatabase() { return new Promise((resolve,reject) => { const request=indexedDB.open('our-orbit-album',1); request.onupgradeneeded=() => { request.result.createObjectStore('photos',{keyPath:'id'}); request.result.createObjectStore('meta'); }; request.onsuccess=() => resolve(request.result); request.onerror=() => reject(request.error); request.onblocked=() => reject(new Error('请关闭其他相册页面后重试')); }); }
 function databaseOperation(storeName, mode, action) { return new Promise((resolve,reject) => { if (!db) { reject(new Error('浏览器存储未就绪')); return; } const transaction=db.transaction(storeName,mode); let result; const request=action(transaction.objectStore(storeName)); request.onsuccess=() => { result=request.result; }; transaction.oncomplete=() => resolve(result); transaction.onabort=() => reject(transaction.error || new Error('保存未完成')); transaction.onerror=() => reject(transaction.error || new Error('存储失败')); }); }
 function photoRecord(photo) { const { url,originalUrl,...record }=photo; return record; }
-async function savePhoto(photo) { await databaseOperation('photos','readwrite',store=>store.put(photoRecord(photo))); }
-function storageError() { toast('未能保存：浏览器存储不可用或空间不足。请保留原始文件。'); }
+async function savePhoto(photo) { await cloud.savePhoto(photo); }
+function storageError() { toast('云端未能保存，请检查网络后重试，并保留原始文件。'); }
+function updateCloudAccount() {
+  $('#cloud-account').textContent = cloudUser ? `${cloudUser.username || '已登录'} · 退出` : '登录私人相册';
+  $('.local-note').textContent = cloudUser ? '云端共享相册 · 仅两人可访问' : '请登录查看你们的照片';
+  $('#migrate-local').hidden = !cloudUser || !localRecords.length;
+}
+async function refreshLibrary() {
+  if (!cloudUser) return;
+  const library = await cloud.loadLibrary();
+  for (const photo of photos) releasePhoto(photo);
+  photos = library.photos;
+  albums = [...new Set(['未分类','一起旅行','日常碎片','特别的日子',...library.albums,...photos.map(p => p.album)])];
+  lastLibraryRefresh = Date.now();
+  render();
+}
 async function init() {
   applyStyle(); populateStyle(); render();
   try {
     db=await openDatabase();
-    const [records,savedAlbums]=await Promise.all([databaseOperation('photos','readonly',store=>store.getAll()),databaseOperation('meta','readonly',store=>store.get('albums'))]);
-    if (Array.isArray(savedAlbums)) albums=[...new Set(['未分类',...savedAlbums.filter(a=>typeof a==='string')])];
-    photos=records.sort((a,b)=>b.createdAt-a.createdAt).map(record=>({...record,url:objectUrl(record.thumbnail || record.blob)}));
-    for (const photo of photos) if (!albums.includes(photo.album)) albums.push(photo.album);
-  } catch { storageError(); }
-  loading=false; render();
+    localRecords=(await databaseOperation('photos','readonly',store=>store.getAll())).filter(record=>!record.cloudId);
+  } catch { db=null; }
+  try { cloudUser=await cloud.restoreSession(); if(cloudUser)await refreshLibrary(); }
+  catch { cloudUser=null; toast('云端连接未就绪，请稍后重试。'); }
+  loading=false; updateCloudAccount(); render();
+  if(!cloudUser && document.body.dataset.screen!=='cover')openDialog('#login-dialog');
 }
+$('#cloud-account').addEventListener('click', async () => {
+  if (!cloudUser) { openDialog('#login-dialog'); return; }
+  await cloud.logout(); cloudUser=null;
+  for (const photo of photos) releasePhoto(photo);
+  photos=[]; updateCloudAccount(); render(); openDialog('#login-dialog');
+});
+$('#login-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form=event.currentTarget,button=$('button[type=submit]',form);
+  button.disabled=true;
+  try {
+    cloudUser=await cloud.login(form.elements.username.value.trim(),form.elements.password.value);
+    form.elements.password.value='';
+    await refreshLibrary(); updateCloudAccount(); closeDialog($('#login-dialog'));
+    toast('欢迎回来，我们的回忆已经同步。');
+  } catch(error) { cloudUser=null; $('#login-error').textContent=error.message || '登录失败，请重试'; }
+  finally { button.disabled=false; }
+});
 
 function renderFilters() {
   const container=$('#album-filters');container.replaceChildren();
@@ -371,7 +405,7 @@ function refreshDailyKey() {
   if(document.body.dataset.screen==='album')render();
 }
 setInterval(refreshDailyKey,30000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDailyKey();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshDailyKey();if(cloudUser&&Date.now()-lastLibraryRefresh>8*60*1000)refreshLibrary().catch(()=>toast('云端刷新失败，请稍后重试。'));}});
 
 async function toggleFavorite(id) {
   if(saving)return;
@@ -384,14 +418,16 @@ function refreshFavorite(photo) { $('#photo-favorite').textContent=photo.favorit
 function showPhoto(id,source=detailSource) {
   const photo=allPhotos().find(p=>p.id===id);if(!photo)return;
   currentPhoto=id;detailSource=source;const image=$('#detail-image');
-  if(!photo.demo&&!photo.originalUrl)photo.originalUrl=objectUrl(photo.blob);
   image.src=photo.originalUrl||photo.url;image.alt=photo.caption;
+  if (!photo.demo && !photo.originalUrl && cloudUser) {
+    cloud.signedUrl(photo.id,photo.viewOriginal===false?'display':'original').then(url=>{ if(currentPhoto===id&&url)image.src=url; }).catch(()=>toast('原图暂时无法载入，请重试。'));
+  }
   const form=$('#detail-form');form.elements.caption.value=photo.caption;form.elements.date.value=photo.date;
   form.elements.album.replaceChildren(...albums.map(name=>{const option=el('option','',name);option.value=name;return option;}));form.elements.album.value=photo.album;
   for(const name of ['caption','date','album'])form.elements[name].disabled=!!photo.demo;
   $('#photo-save').hidden=!!photo.demo;$('#photo-delete').hidden=!!photo.demo;$('#photo-download').hidden=!!photo.demo;
   $('#detail-label').textContent=photo.demo?'ILLUSTRATION / 示例插画':'OUR MEMORY / 我们的回忆';
-  $('#detail-note').textContent=photo.demo?'这些插画用于预览风格。导入照片后，这里会换成你们的回忆。':'原始文件保存在当前浏览器。尚未连接云存储，请另外保留原图备份。';
+  $('#detail-note').textContent=photo.demo?'这些插画用于预览风格。导入照片后，这里会换成你们的回忆。':'这张照片保存在你们的私人云相册。请另外保留原图备份。';
   refreshFavorite(photo);openDialog('#photo-dialog');
 }
 function adjacentPhoto(direction) { const list=detailSource==='daily'?pickDailyPhotos(visiblePhotos(),dailyKey,100):visiblePhotos();if(!list.length)return;const index=list.findIndex(p=>p.id===currentPhoto);const next=index<0?0:(index+direction+list.length)%list.length;showPhoto(list[next].id); }
@@ -404,34 +440,32 @@ $('#detail-form').addEventListener('submit',async event=>{
   saving=true;$('#photo-save').disabled=true;
   try { const updated={...photo,caption,date:form.elements.date.value,album:form.elements.album.value};await savePhoto(updated);Object.assign(photo,updated);render();toast('这一刻，记下了。');closeDialog($('#photo-dialog')); }catch{storageError();}finally{saving=false;$('#photo-save').disabled=false;}
 });
-$('#photo-download').addEventListener('click',()=>{const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;const link=el('a');link.href=photo.originalUrl||objectUrl(photo.blob);link.download=photo.filename||'memory.jpg';document.body.append(link);link.click();link.remove();});
+$('#photo-download').addEventListener('click',async()=>{const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;try{const url=photo.originalUrl||await cloud.signedUrl(photo.id,'original');if(!url)throw new Error();const link=el('a');link.href=url;link.download=photo.filename||'memory.jpg';link.target='_blank';document.body.append(link);link.click();link.remove();}catch{toast('原图下载暂时不可用，请稍后再试。');}});
 $('#photo-delete').addEventListener('click',()=>openDialog('#delete-dialog'));
-$('#delete-confirm').addEventListener('click',async()=>{if(saving)return;const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;saving=true;$('#delete-confirm').disabled=true;try{await databaseOperation('photos','readwrite',store=>store.delete(photo.id));photos=photos.filter(p=>p.id!==photo.id);releasePhoto(photo);closeDialog($('#delete-dialog'));closeDialog($('#photo-dialog'));render();toast('已移除当前浏览器里的相册副本。');}catch{storageError();}finally{saving=false;$('#delete-confirm').disabled=false;}});
+$('#delete-confirm').addEventListener('click',async()=>{if(saving)return;const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;saving=true;$('#delete-confirm').disabled=true;try{await cloud.removePhoto(photo.id);photos=photos.filter(p=>p.id!==photo.id);releasePhoto(photo);closeDialog($('#delete-dialog'));closeDialog($('#photo-dialog'));render();toast('已从共同相册移除。');}catch{storageError();}finally{saving=false;$('#delete-confirm').disabled=false;}});
 
 $('#album-create').addEventListener('click',()=>{ $('#album-form').reset();openDialog('#album-dialog'); });
 $('#album-form').addEventListener('submit',async event=>{
   event.preventDefault();const name=event.currentTarget.elements.albumName.value.trim();if(!name)return;
   if(['all','favorites'].includes(name)||albums.includes(name)){toast('这个名字已经使用，请换一个名字。');return;}
   const button=$('button[type=submit]',event.currentTarget);button.disabled=true;
-  try{const next=[...albums,name];await databaseOperation('meta','readwrite',store=>store.put(next,'albums'));albums=next;currentFilter=name;query='';$('#search').value='';page=0;render();closeDialog($('#album-dialog'));toast(`相册「${name}」建好了，导入照片就会放进这里。`);}catch{storageError();}finally{button.disabled=false;}
+  try{if(!cloudUser){openDialog('#login-dialog');return;}const next=[...albums,name];await cloud.createAlbum(name);albums=next;currentFilter=name;query='';$('#search').value='';page=0;render();closeDialog($('#album-dialog'));toast(`相册「${name}」建好了，导入照片就会放进这里。`);}catch{storageError();}finally{button.disabled=false;}
 });
-function chooseFiles() { if(loading||importing)return;if(!db){storageError();return;}$('#file-input').click(); }
+function chooseFiles() { if(loading||importing)return;if(!cloudUser){openDialog('#login-dialog');return;}$('#file-input').click(); }
 $('#import-open').addEventListener('click',chooseFiles);$('#empty-import').addEventListener('click',chooseFiles);
 async function makeThumbnail(file) {
   const url=URL.createObjectURL(file),image=new Image();
   try {
     image.src=url;await image.decode();
     if(!image.naturalWidth||!image.naturalHeight)throw new Error('无法读取图片');
-    const scale=Math.min(1,900/Math.max(image.naturalWidth,image.naturalHeight));
-    const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-    canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
-    const thumbnail=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('无法生成预览')),'image/webp',.85));
-    return {thumbnail,width:image.naturalWidth,height:image.naturalHeight};
+    const resize=async max=>{const scale=Math.min(1,max/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('无法生成预览')),'image/webp',.84));};
+    const [thumbnail,display]=await Promise.all([resize(480),resize(1600)]);
+    return {thumbnail,display,width:image.naturalWidth,height:image.naturalHeight};
   }finally{URL.revokeObjectURL(url);}
 }
 $('#file-input').addEventListener('change',async event=>{
-  if(importing||!db)return;const files=[...event.target.files];event.target.value='';if(!files.length)return;
-  if(files.length>100){toast('一次最多导入 100 张照片，请分批选择。');return;}
+  if(importing||!cloudUser)return;const files=[...event.target.files];event.target.value='';if(!files.length)return;
+  if(files.length>1000){toast('一次最多导入 1000 张照片，请分批选择。');return;}
   importing=true;$('#import-open').disabled=true;$('#empty-import').disabled=true;
   const album=albums.includes(currentFilter)?currentFilter:'未分类';let imported=0,unsupported=0,oversized=0,failed=0;
   for(const [index,file] of files.entries()){
@@ -440,15 +474,35 @@ $('#file-input').addEventListener('change',async event=>{
     if(file.size>25*1024*1024){oversized++;continue;}
     try {
       const preview=await makeThumbnail(file);
-      const record={id:crypto.randomUUID(),caption:file.name.replace(/\.[^.]+$/,'').slice(0,100)||'新的回忆',filename:file.name,date:today(),album,favorite:false,createdAt:Date.now(),blob:file,...preview};
-      await savePhoto(record);photos.unshift({...record,url:objectUrl(preview.thumbnail)});imported++;
+      const record=await cloud.uploadPhoto(file,preview,{album,date:today()});
+      photos.unshift(record);imported++;
     }catch{failed++;}
   }
   importing=false;$('#import-open').replaceChildren(el('span','','＋'),document.createTextNode(' 放入回忆'));
   if(imported){if(currentFilter==='favorites')currentFilter='all';query='';$('#search').value='';page=0;}
   render();
-  const notes=[`已在当前浏览器保存 ${imported} 张照片`];if(unsupported)notes.push(`${unsupported} 张格式不支持`);if(oversized)notes.push(`${oversized} 张超过 25 MB`);if(failed)notes.push(`${failed} 张未保存，请检查文件或存储空间`);
+  const notes=[`已上传到共同相册 ${imported} 张照片`];if(unsupported)notes.push(`${unsupported} 张格式不支持`);if(oversized)notes.push(`${oversized} 张超过 25 MB`);if(failed)notes.push(`${failed} 张未保存，请检查网络后重试`);
   toast(notes.join('；')+'。日期默认今天，可在照片详情修改。');
+});
+$('#migrate-local').addEventListener('click',async()=>{
+  if(!cloudUser||!localRecords.length||importing)return;
+  importing=true;$('#migrate-local').disabled=true;
+  let copied=0,failed=0;
+  for(const [index,record] of localRecords.entries()){
+    $('#migrate-local').textContent=`正在同步旧照片 ${index+1}/${localRecords.length}`;
+    try{
+      const file=new File([record.blob],record.filename||'memory.jpg',{type:record.blob.type||'image/jpeg'});
+      const preview=await makeThumbnail(file);
+      const result=await cloud.uploadPhoto(file,preview,{caption:record.caption,date:record.date,album:record.album,favorite:record.favorite,createdAt:record.createdAt});
+      await databaseOperation('photos','readwrite',store=>store.put({...record,cloudId:result.id}));
+      record.cloudId=result.id;
+      copied++;
+    }catch{failed++;}
+  }
+  importing=false;$('#migrate-local').disabled=false;$('#migrate-local').textContent='同步这台电脑以前导入的照片';
+  localRecords=localRecords.filter(record=>!record.cloudId);
+  await refreshLibrary();
+  toast(`已同步 ${copied} 张旧照片${failed?`；${failed} 张失败，请保留本机原图`:''}。`);
 });
 // Keep object URLs valid when the browser restores this document from its back/forward cache.
 // Removed photos are revoked explicitly; the browser releases remaining URLs on document disposal.
@@ -457,7 +511,7 @@ window.addEventListener('pageshow',startLoop);
 initCover({
   onScreenChange(isAlbum,screen){
     galaxy.setActive(isAlbum);
-    if(screen==='album'){dailyKey=shanghaiDateKey();currentFilter='all';query='';$('#search').value='';page=0;render();requestAnimationFrame(measureStage);startLoop();}else stopLoop();
+    if(screen==='album'){dailyKey=shanghaiDateKey();currentFilter='all';query='';$('#search').value='';page=0;render();requestAnimationFrame(measureStage);startLoop();if(!loading&&!cloudUser)openDialog('#login-dialog');}else stopLoop();
   },
   onFavorites(){currentFilter='favorites';query='';$('#search').value='';page=0;collectionVisible=COLLECTION_BATCH;render();},
   onCollection(category){currentFilter=category||'all';query='';$('#search').value='';page=0;collectionVisible=COLLECTION_BATCH;render();}

@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import esbuild from 'esbuild';
+const root = path.dirname(fileURLToPath(import.meta.url));
+const output = path.join(root, 'dist');
+fs.mkdirSync(path.join(root, 'vendor'), { recursive: true });
+esbuild.buildSync({ stdin: { contents: "export { default } from '@cloudbase/js-sdk';", resolveDir: root }, bundle: true, minify: true, format: 'esm', platform: 'browser', outfile: path.join(root, 'vendor/cloudbase.js'), legalComments: 'linked' });
+fs.mkdirSync(path.join(output, 'vendor'), { recursive: true });
+const files = ['index.html','styles.css','cover.css','photo-effects.css','app.js','cover.js','galaxy.js','daily-selection.js','photo-effects.js','cloud-service.js','cloud-config.js','vendor/cloudbase.js','vendor/cloudbase.js.LEGAL.txt'];
+for (const file of files) fs.copyFileSync(path.join(root, file), path.join(output, file));
+console.log(`Prepared ${files.length} public files`);

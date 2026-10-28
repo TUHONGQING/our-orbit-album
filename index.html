@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080e20">
   <meta name="description" content="属于两个人的夜空相册。把平凡日子，存成闪光的回忆。">
+  <script>if(location.hostname==='tuhongqing.github.io')location.replace('https://lele2007-d8g88p15969cad71e-1449216356.tcloudbaseapp.com/'+location.hash);</script>
   <title>OUR ORBIT · Memory</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="cover.css">
@@ -54,7 +55,7 @@
   <div class="sky" aria-hidden="true"><canvas id="galaxy-canvas"></canvas><div class="nebula"></div><div id="stars"></div></div>
   <header class="header">
     <a class="brand" href="#cover" aria-label="返回相册封面"><span class="brand-icon" aria-hidden="true">☾</span><span><strong id="brand-name">OUR ORBIT</strong><small>OUR LITTLE ORBIT</small></span></a>
-    <nav aria-label="主导航"><a class="nav-cover" href="#cover">封面</a><a class="nav-albums" href="#collection">所有回忆</a><button class="text-button" id="style-open"><span aria-hidden="true">✧</span> 调整风格</button><button class="primary" id="import-open"><span aria-hidden="true">＋</span> 放入回忆</button></nav>
+    <nav aria-label="主导航"><a class="nav-cover" href="#cover">封面</a><a class="nav-albums" href="#collection">所有回忆</a><button class="text-button" id="cloud-account">登录私人相册</button><button class="text-button" id="style-open"><span aria-hidden="true">✧</span> 调整风格</button><button class="primary" id="import-open"><span aria-hidden="true">＋</span> 放入回忆</button></nav>
   </header>
   <main>
     <section class="universe" aria-label="互动照片空间">
@@ -76,10 +77,12 @@
       <div id="empty" class="empty" hidden><span aria-hidden="true">✧</span><h3>这一片星空，留给新的回忆</h3><p id="empty-text">放入第一张照片，让故事从这里开始。</p><button class="primary" id="empty-import">放入照片</button></div>
     </section>
   </main>
-  <footer><span>在浩瀚日常里，收藏属于我们的光。</span><span class="local-note"><i></i> 本机预览 · 照片仅保存在当前浏览器</span></footer>
+  <footer><span>在浩瀚日常里，收藏属于我们的光。</span><span class="local-note">请登录查看你们的照片</span><button id="migrate-local" type="button" hidden>同步这台电脑以前导入的照片</button></footer>
   </div>
   <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="login-dialog" class="small-dialog" aria-labelledby="login-title"><form id="login-form"><div class="dialog-heading"><h2 id="login-title">进入我们的私人星空</h2><button type="button" class="icon-button close-dialog" aria-label="关闭登录窗口">×</button></div><p class="muted">输入属于你们的相册账号，照片会在两人的设备间同步。</p><label>账号<input name="username" autocomplete="username" required></label><label>密码<input name="password" type="password" autocomplete="current-password" required></label><p id="login-error" role="alert"></p><button class="primary" type="submit">进入相册</button></form></dialog>
 
   <dialog id="style-dialog" class="style-dialog" aria-labelledby="style-title">
     <form id="style-form"><div class="dialog-heading"><div><span class="eyebrow">MAKE IT YOURS</span><h2 id="style-title">把夜空，调成你的样子</h2></div><button type="button" class="icon-button close-dialog" aria-label="关闭风格面板">×</button></div>
@@ -99,7 +102,7 @@
     <form id="detail-form" class="detail-info"><span class="eyebrow" id="detail-label">OUR MEMORY</span><label>这一刻的名字<input name="caption" maxlength="100" required></label><div class="detail-fields"><label>回忆日期<input name="date" type="date" required></label><label>收进相册<select name="album"></select></label></div><p id="detail-note" class="muted"></p><div class="detail-actions"><button type="button" id="photo-favorite" class="text-button">♡ 收藏</button><button type="button" id="photo-download" class="text-button">↓ 原图</button><button type="button" id="photo-delete" class="text-button danger">删除</button><button type="submit" class="primary" id="photo-save">保存</button></div></form>
   </dialog>
   <dialog id="album-dialog" class="small-dialog" aria-labelledby="album-title"><form id="album-form"><div class="dialog-heading"><h2 id="album-title">为一段回忆，起个名字</h2><button type="button" class="icon-button close-dialog" aria-label="关闭新建相册">×</button></div><label>相册名称<input name="albumName" placeholder="比如：第一次一起看海" maxlength="30" required></label><button type="submit" class="primary">创建相册</button></form></dialog>
-  <dialog id="delete-dialog" class="small-dialog" aria-labelledby="delete-title"><h2 id="delete-title">移除这张照片？</h2><p class="muted">这会删除当前浏览器里的相册副本，不会删除电脑上的原始文件。</p><div class="dialog-actions"><button class="text-button close-dialog">保留</button><button id="delete-confirm" class="primary">确认移除</button></div></dialog>
+  <dialog id="delete-dialog" class="small-dialog" aria-labelledby="delete-title"><h2 id="delete-title">移除这张照片？</h2><p class="muted">这会从你们的共同相册中隐藏照片，两人的页面都会同步；请保留原图备份。</p><div class="dialog-actions"><button class="text-button close-dialog">保留</button><button id="delete-confirm" class="primary">确认移除</button></div></dialog>
   <dialog id="cover-info-dialog" class="small-dialog" aria-labelledby="cover-info-title"><div class="dialog-heading"><h2 id="cover-info-title">关于这片星空</h2><button class="icon-button close-dialog" aria-label="关闭说明">×</button></div><div id="cover-info-content" class="muted"></div><div class="dialog-actions"><button class="text-button close-dialog">知道了</button><a class="primary" href="#album" id="info-enter">进入相册 ↗</a></div></dialog>
 </body>
 </html>

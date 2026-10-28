@@ -66,7 +66,7 @@ export function initCover({ onScreenChange, onFavorites, onCollection }) {
 
   const descriptions = {
     about: { title:'只属于我们的片刻', paragraphs:['一起看过的海，随手拍下的晚霞，还有那些说不清为什么喜欢的日常，都值得被好好收藏。','进入星空后，可以拖动照片、创建相册，或在“调整风格”中写下你们自己的话。'] },
-    storage: { title:'让回忆，安心留下来', paragraphs:['当前是本机预览：导入的照片仅保存在这个浏览器里，还没有上传云端，也不会自动同步到另一台手机。','清理浏览器数据可能移除这些照片。请保留电脑或移动硬盘上的原图备份。','正式导入 1000 多张高清原图前，需要接入云端文件存储；浏览器容量无法保证长期保存。','后续接入云端保存和双人登录后，才可以让你们在不同设备上共同管理相册。云端保存也需要备份与持续维护。'] }
+    storage: { title:'让回忆，安心留下来', paragraphs:['登录私人相册后，网页导入的照片会上传到云端，你们两人可以在各自设备查看。','云端相册仍需要续费和备份，请保留电脑或移动硬盘上的原图。','这台电脑以前导入的照片可以在登录后手动同步；同步前它们仍保存在原浏览器中。'] }
   };
   $$('[data-info]').forEach(button=>button.addEventListener('click',()=>{
     const info=descriptions[button.dataset.info];closeMenu();$('#cover-info-title').textContent=info.title;

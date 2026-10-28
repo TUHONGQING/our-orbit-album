@@ -3,6 +3,8 @@ node_modules/
 photos/
 uploads/
 private/
+dist/
+vendor/
 *.heic
 *.livp
 *.mov
