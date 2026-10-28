@@ -440,7 +440,7 @@ $('#detail-form').addEventListener('submit',async event=>{
   saving=true;$('#photo-save').disabled=true;
   try { const updated={...photo,caption,date:form.elements.date.value,album:form.elements.album.value};await savePhoto(updated);Object.assign(photo,updated);render();toast('这一刻，记下了。');closeDialog($('#photo-dialog')); }catch{storageError();}finally{saving=false;$('#photo-save').disabled=false;}
 });
-$('#photo-download').addEventListener('click',async()=>{const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;try{const url=photo.originalUrl||await cloud.signedUrl(photo.id,'original');if(!url)throw new Error();const link=el('a');link.href=url;link.download=photo.filename||'memory.jpg';link.target='_blank';document.body.append(link);link.click();link.remove();}catch{toast('原图下载暂时不可用，请稍后再试。');}});
+$('#photo-download').addEventListener('click',async()=>{const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;try{const previewOnly=photo.originalReady===false;const url=photo.originalUrl||await cloud.signedUrl(photo.id,previewOnly?'display':'original');if(!url)throw new Error();const link=el('a');link.href=url;link.download=previewOnly?(photo.filename||'memory').replace(/\.[^.]+$/,'')+'.webp':photo.filename||'memory.jpg';link.target='_blank';document.body.append(link);link.click();link.remove();if(previewOnly)toast('原文件同步中，已下载清晰预览图。');}catch{toast('照片下载暂时不可用，请稍后再试。');}});
 $('#photo-delete').addEventListener('click',()=>openDialog('#delete-dialog'));
 $('#delete-confirm').addEventListener('click',async()=>{if(saving)return;const photo=photos.find(p=>p.id===currentPhoto);if(!photo)return;saving=true;$('#delete-confirm').disabled=true;try{await cloud.removePhoto(photo.id);photos=photos.filter(p=>p.id!==photo.id);releasePhoto(photo);closeDialog($('#delete-dialog'));closeDialog($('#photo-dialog'));render();toast('已从共同相册移除。');}catch{storageError();}finally{saving=false;$('#delete-confirm').disabled=false;}});
 
@@ -517,3 +517,4 @@ initCover({
   onCollection(category){currentFilter=category||'all';query='';$('#search').value='';page=0;collectionVisible=COLLECTION_BATCH;render();}
 });
 init();
+
